@@ -31,40 +31,38 @@ def generar_preguntas(texto: str):
     try:
         # Solicita a OpenAI generar las preguntas basadas en el texto proporcionado
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo",  # Modelo válido
             messages=[
-                {"role": "system", "content": "Eres un generador de preguntas de opción múltiple basado en el texto."},
-                {"role": "user", "content": prompt},
+                {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},
+                {"role": "user", "content": prompt}
             ],
-            max_tokens=1000
+            max_tokens=1000  # Ajusta este valor según tus necesidades
         )
 
         # Extrae el contenido generado por el modelo
-        resultado = response.choices[0].message["content"]
+        resultado = response["choices"][0]["message"]["content"]
         tokens_usados = response["usage"]["total_tokens"]
         print(f"Tokens usados en la solicitud: {tokens_usados}")
 
         return resultado
-    except openai.error.OpenAIError as e:
-        # Manejo de errores de OpenAI
-        print(f"Error al interactuar con OpenAI: {str(e)}")
-        return {"error": f"Error al interactuar con OpenAI: {str(e)}"}
-    except Exception as e:
-        # Otros errores no esperados
-        print(f"Error inesperado: {str(e)}")
-        return {"error": f"Error inesperado: {str(e)}"}
+    except Exception as error:
+        # Manejo de errores genéricos
+        print(f"Error inesperado: {error}")
+        return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
 
 # Endpoint de FastAPI que recibe el texto para generar preguntas
 @app.post("/generate-questions/")
 async def generate_questions(data: InputData):
+    # Validación inicial del texto proporcionado
     if not data.texto.strip():
         raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
-
+    
     # Llamamos a la función para generar preguntas basadas en el texto recibido
     result = generar_preguntas(data.texto)
 
     # Si el resultado contiene un error, devolvemos una excepción HTTP
     if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
-
+    
+    # Devolvemos el resultado generado por OpenAI
     return {"resultado": result}
