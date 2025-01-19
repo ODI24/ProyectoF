@@ -31,29 +31,29 @@ def generar_preguntas(texto: str):
     try:
         # Solicita a OpenAI generar las preguntas basadas en el texto proporcionado
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Asegúrate de usar un modelo válido
+            model="gpt-3.5-turbo",  # Modelo a usar
             messages=[
                 {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=1000  # Ajusta este valor según tus necesidades
+            max_tokens=1000
         )
 
         # Extrae el contenido generado por el modelo
-        resultado = response["choices"][0]["message"]["content"]
-        tokens_usados = response["usage"]["total_tokens"]
+        resultado = response.choices[0].message.content
+        tokens_usados = response.usage.total_tokens
         print(f"Tokens usados en la solicitud: {tokens_usados}")
 
         return resultado
-    except openai.InvalidRequestError as error:
-        # Error relacionado con solicitudes no válidas
+    except openai.error.InvalidRequestError as error:
+        # Manejo de errores relacionados con solicitudes inválidas
         print(f"Error de solicitud inválida: {error}")
         return {"error": f"Solicitud inválida: {str(error)}"}
-    except openai.RateLimitError as error:
-        # Error de límite de solicitudes
+    except openai.error.RateLimitError as error:
+        # Manejo de errores por límite de solicitudes
         print(f"Error de límite de solicitudes: {error}")
         return {"error": "Se alcanzó el límite de solicitudes. Intenta más tarde."}
-    except openai.OpenAIError as error:
+    except openai.error.OpenAIError as error:
         # Otros errores de OpenAI
         print(f"Error de OpenAI: {error}")
         return {"error": f"Error al interactuar con OpenAI: {str(error)}"}
