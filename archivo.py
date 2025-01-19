@@ -31,50 +31,40 @@ def generar_preguntas(texto: str):
     try:
         # Solicita a OpenAI generar las preguntas basadas en el texto proporcionado
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Modelo a usar
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Eres un generador de preguntas de opción múltiple basado en el texto."},
+                {"role": "user", "content": prompt},
             ],
             max_tokens=1000
         )
 
         # Extrae el contenido generado por el modelo
-        resultado = response.choices[0].message.content
-        tokens_usados = response.usage.total_tokens
+        resultado = response.choices[0].message["content"]
+        tokens_usados = response["usage"]["total_tokens"]
         print(f"Tokens usados en la solicitud: {tokens_usados}")
 
         return resultado
-    except openai.error.InvalidRequestError as error:
-        # Manejo de errores relacionados con solicitudes inválidas
-        print(f"Error de solicitud inválida: {error}")
-        return {"error": f"Solicitud inválida: {str(error)}"}
-    except openai.error.RateLimitError as error:
-        # Manejo de errores por límite de solicitudes
-        print(f"Error de límite de solicitudes: {error}")
-        return {"error": "Se alcanzó el límite de solicitudes. Intenta más tarde."}
-    except openai.error.OpenAIError as error:
-        # Otros errores de OpenAI
-        print(f"Error de OpenAI: {error}")
-        return {"error": f"Error al interactuar con OpenAI: {str(error)}"}
-    except Exception as error:
+    except openai.error.OpenAIError as e:
+        # Manejo de errores de OpenAI
+        print(f"Error al interactuar con OpenAI: {str(e)}")
+        return {"error": f"Error al interactuar con OpenAI: {str(e)}"}
+    except Exception as e:
         # Otros errores no esperados
-        print(f"Error inesperado: {error}")
-        return {"error": f"Error inesperado: {str(error)}"}
+        print(f"Error inesperado: {str(e)}")
+        return {"error": f"Error inesperado: {str(e)}"}
 
 # Endpoint de FastAPI que recibe el texto para generar preguntas
 @app.post("/generate-questions/")
 async def generate_questions(data: InputData):
-    # Validación inicial del texto proporcionado
     if not data.texto.strip():
         raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
-    
+
     # Llamamos a la función para generar preguntas basadas en el texto recibido
     result = generar_preguntas(data.texto)
 
     # Si el resultado contiene un error, devolvemos una excepción HTTP
     if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
-    
-    # Devolvemos el resultado generado por OpenAI
+
     return {"resultado": result}
