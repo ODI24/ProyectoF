@@ -55,12 +55,13 @@ def generar_preguntas(texto: str):
 # Endpoint de FastAPI que recibe el texto para generar preguntas
 @app.post("/generate-questions/")
 async def generate_questions(data: InputData):
-    # Llamamos a la función para generar preguntas basadas en el texto recibido
+    if not data.texto.strip():
+        raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
+    
     result = generar_preguntas(data.texto)
 
-    # Si no se genera un resultado válido, devolvemos un error
-    if not result:
-        raise HTTPException(status_code=400, detail="No se pudo generar preguntas debido a la falta de contexto adecuado.")
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
     
-    # Devolvemos el resultado generado por el modelo OpenAI
     return {"resultado": result}
+
