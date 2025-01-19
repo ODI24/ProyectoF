@@ -31,28 +31,36 @@ def generar_preguntas(texto: str):
     try:
         # Solicita a OpenAI generar las preguntas basadas en el texto proporcionado
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo",  # Asegúrate de usar un modelo válido
             messages=[
                 {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=1000  # Ajusta este valor según lo que necesites
+            max_tokens=1000  # Ajusta este valor según tus necesidades
         )
 
         # Extrae el contenido generado por el modelo
-        resultado = response.choices[0].message.content
-        tokens_usados = response.usage.total_tokens
+        resultado = response["choices"][0]["message"]["content"]
+        tokens_usados = response["usage"]["total_tokens"]
         print(f"Tokens usados en la solicitud: {tokens_usados}")
 
         return resultado
+    except openai.error.InvalidRequestError as error:
+        # Error relacionado con solicitudes no válidas
+        print(f"Error de solicitud inválida: {error}")
+        return {"error": f"Solicitud inválida: {str(error)}"}
+    except openai.error.RateLimitError as error:
+        # Error de límite de solicitudes
+        print(f"Error de límite de solicitudes: {error}")
+        return {"error": "Se alcanzó el límite de solicitudes. Intenta más tarde."}
     except openai.error.OpenAIError as error:
-        # Manejo de errores de OpenAI
+        # Otros errores de OpenAI
         print(f"Error de OpenAI: {error}")
         return {"error": f"Error al interactuar con OpenAI: {str(error)}"}
     except Exception as error:
-        # Si ocurre cualquier otro error inesperado
-        print("Ocurrió un error inesperado: ", error)
-        return {"error": f"Ocurrió un error inesperado: {str(error)}"}
+        # Otros errores no esperados
+        print(f"Error inesperado: {error}")
+        return {"error": f"Error inesperado: {str(error)}"}
 
 # Endpoint de FastAPI que recibe el texto para generar preguntas
 @app.post("/generate-questions/")
