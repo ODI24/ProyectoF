@@ -29,27 +29,30 @@ def generar_preguntas(texto: str):
     """
 
     try:
-        print("Enviando solicitud a OpenAI...")
-        # Solicita a OpenAI generar las preguntas
+        # Solicita a OpenAI generar las preguntas basadas en el texto proporcionado
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": prompt}],
-            max_tokens=1000
+            messages=[
+                {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1000  # Ajusta este valor según lo que necesites
         )
-        print("Respuesta recibida de OpenAI:", response)
 
         # Extrae el contenido generado por el modelo
-        resultado = response['choices'][0]['message']['content']
+        resultado = response.choices[0].message.content
+        tokens_usados = response.usage.total_tokens
+        print(f"Tokens usados en la solicitud: {tokens_usados}")
+
         return resultado
-    except openai.error.RateLimitError as error:
-        print("Error de límite de tasa:", error)
-        return {"error": "Se alcanzó el límite de solicitudes. Intenta más tarde."}
     except openai.error.OpenAIError as error:
-        print("Error de OpenAI:", error)
+        # Manejo de errores de OpenAI
+        print(f"Error de OpenAI: {error}")
         return {"error": f"Error al interactuar con OpenAI: {str(error)}"}
     except Exception as error:
-        print("Error inesperado:", error)
-        return {"error": f"Error inesperado: {str(error)}"}
+        # Si ocurre cualquier otro error inesperado
+        print("Ocurrió un error inesperado: ", error)
+        return {"error": f"Ocurrió un error inesperado: {str(error)}"}
 
 # Endpoint de FastAPI que recibe el texto para generar preguntas
 @app.post("/generate-questions/")
