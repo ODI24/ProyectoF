@@ -2,7 +2,14 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import os
 import openai
-from openai.error import OpenAIError, RateLimitError  # Asegúrate de importar las excepciones correctas
+try:
+    from openai.error import OpenAIError, RateLimitError
+except ImportError:
+    class OpenAIError(Exception):
+        pass
+    class RateLimitError(OpenAIError):
+        pass
+
 
 # Inicializa FastAPI
 app = FastAPI()
