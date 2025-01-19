@@ -45,15 +45,15 @@ def generar_preguntas(texto: str):
         print(f"Tokens usados en la solicitud: {tokens_usados}")
 
         return resultado
-    except openai.error.InvalidRequestError as error:
+    except openai.InvalidRequestError as error:
         # Error relacionado con solicitudes no válidas
         print(f"Error de solicitud inválida: {error}")
         return {"error": f"Solicitud inválida: {str(error)}"}
-    except openai.error.RateLimitError as error:
+    except openai.RateLimitError as error:
         # Error de límite de solicitudes
         print(f"Error de límite de solicitudes: {error}")
         return {"error": "Se alcanzó el límite de solicitudes. Intenta más tarde."}
-    except openai.error.OpenAIError as error:
+    except openai.OpenAIError as error:
         # Otros errores de OpenAI
         print(f"Error de OpenAI: {error}")
         return {"error": f"Error al interactuar con OpenAI: {str(error)}"}
