@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel  
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
 import os
 import openai
+import json
 
 # Inicializa FastAPI
 app = FastAPI()
@@ -31,7 +32,7 @@ def generar_preguntas(texto: str):
     try:
         # Solicita a OpenAI generar las preguntas basadas en el texto proporcionado
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Modelo válido
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},
                 {"role": "user", "content": prompt}
@@ -50,19 +51,38 @@ def generar_preguntas(texto: str):
         print(f"Error inesperado: {error}")
         return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
 
-# Función asociada al endpoint
-@app.post("/generate-questions/")
-async def generate_questions(data: InputData):
-    # Validación inicial del texto proporcionado
-    if not data.texto.strip():
-        raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
-    
-    # Llamamos a la función para generar preguntas basadas en el texto recibido
-    result = generar_preguntas(data.texto)
+# Registra manualmente el endpoint en FastAPI sin usar decoradores
+def generate_questions_endpoint(app: FastAPI):
+    async def generate_questions(request: Request):
+        try:
+            # Extrae los datos de la solicitud
+            body = await request.body()
+            data = json.loads(body)
 
-    # Si el resultado contiene un error, devolvemos una excepción HTTP
-    if isinstance(result, dict) and "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
-    
-    # Devolvemos el resultado generado por OpenAI
-    return {"resultado": result}
+            # Validación inicial del texto proporcionado
+            if "texto" not in data or not data["texto"].strip():
+                raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
+
+            # Llama a la función para generar preguntas
+            result = generar_preguntas(data["texto"])
+
+            # Si el resultado contiene un error, devolvemos una excepción HTTP
+            if isinstance(result, dict) and "error" in result:
+                raise HTTPException(status_code=500, detail=result["error"])
+
+            # Devuelve el resultado generado por OpenAI
+            return {"resultado": result}
+        except HTTPException as e:
+            raise e
+        except Exception as error:
+            raise HTTPException(status_code=500, detail=f"Error al procesar la solicitud: {str(error)}")
+
+    # Asocia manualmente la ruta con la función del endpoint
+    app.router.add_api_route(
+        path="/generate-questions/",
+        endpoint=generate_questions,
+        methods=["POST"]
+    )
+
+# Agrega el endpoint a la aplicación
+generate_questions_endpoint(app)
