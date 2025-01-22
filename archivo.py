@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel  
 import os
 import openai
 
@@ -45,13 +45,12 @@ def generar_preguntas(texto: str):
         print(f"Tokens usados en la solicitud: {tokens_usados}")
 
         return resultado
-    except Exception as error:
+        except Exception as error:
         # Manejo de errores genéricos
         print(f"Error inesperado: {error}")
         return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
 
-# Endpoint de FastAPI que recibe el texto para generar preguntas
-@app.post("/generate-questions/")
+# Función asociada al endpoint
 async def generate_questions(data: InputData):
     # Validación inicial del texto proporcionado
     if not data.texto.strip():
@@ -66,3 +65,10 @@ async def generate_questions(data: InputData):
     
     # Devolvemos el resultado generado por OpenAI
     return {"resultado": result}
+
+# Asocia manualmente el endpoint con la función usando app.add_api_route
+app.add_api_route(
+    path="/generate-questions/",  # Ruta del endpoint
+    endpoint=generate_questions,  # Función que manejará la solicitud
+    methods=["POST"],  # Métodos HTTP permitidos
+)
