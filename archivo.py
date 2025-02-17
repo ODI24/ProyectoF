@@ -72,7 +72,7 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},  {"role": "user", "content": prompt}],
-            max_tokens=3000 
+            max_tokens=1500 
         )
 
         resultado = response["choices"][0]["message"]["content"]  #Extrae el contenido del JSON 
