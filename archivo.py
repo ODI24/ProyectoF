@@ -50,7 +50,7 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
        - NO incluyas preguntas que contengan expresiones matemáticas, signos o símbolos explícitos, como integrales, sumatorias, fracciones, raíces cuadradas, u otros caracteres especiales que puedan no entenderse o no mostrarse correctamente en la aplicación.
        - SOLO genera preguntas conceptuales sobre el texto proporcionado, como explicaciones, definiciones, ejemplos o implicaciones teóricas.
 
-    Proporciona las preguntas generadas en el siguiente formato JSON:
+    Proporciona las preguntas generadas en el siguiente formato JSON, UNICAMENTE devolveras un JSON valido con las preguntas generadas:
     {{
       "preguntas": [
         {{
@@ -71,8 +71,8 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},  {"role": "user", "content": prompt}],
-            max_tokens=1500 
+            messages=[{"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple y unicamente las devuelve en formato JSON."},  {"role": "user", "content": prompt}],
+            max_tokens=1500
         )
 
         resultado = response["choices"][0]["message"]["content"]  #Extrae el contenido del JSON 
