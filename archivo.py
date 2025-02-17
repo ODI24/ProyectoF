@@ -82,7 +82,7 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
         return resultado
     except Exception as error:
         return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
-        
+
 
 async def Manejo_GenerarPreguntas(request: Request):
     try:
@@ -91,8 +91,7 @@ async def Manejo_GenerarPreguntas(request: Request):
         data = json.loads(body)
         
         if not data.get("texto"):
-        raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
-
+            raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
 
         # Llama a la función para generar preguntas
         result = GenerarPreguntas(data["texto"])
