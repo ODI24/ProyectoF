@@ -6,15 +6,14 @@ import os
 
 openai.api_key = os.getenv("API_KEY") #Variable de entorno
 
-
-# Modelo de datos para recibir la entrada desde la aplicación móvil
-class DatosRecibidos(BaseModel):
+class DatosRecibidos(BaseModel): # Clase para definir el modelo de datos recibidos
     texto: str
 
-# Función que genera preguntas utilizando OpenAI
-def GenerarPreguntas(texto: str):
-    prompt = f"""
- Eres un generador de preguntas altamente específico y objetivo. Sigues estrictamente las siguientes reglas al generar preguntas de opción múltiple basadas en el texto proporcionado:
+
+def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de tipado string
+    #Definimos una variable "Promt" y le asignamos un f-string  
+    prompt = f"""Q 
+    Eres un generador de preguntas altamente específico y objetivo. Sigues estrictamente las siguientes reglas al generar preguntas de opción múltiple basadas en el texto proporcionado:
 
     1. Ambigüedad en los conceptos:
        - Si el texto contiene términos abiertos a múltiples interpretaciones como "verdad" o "justicia", debes verificar si hay suficiente contexto para definirlos claramente.
@@ -70,38 +69,30 @@ def GenerarPreguntas(texto: str):
     """
 
     try:
-        # Solicita a OpenAI generar las preguntas basadas en el texto proporcionado
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=1000  # Ajusta este valor según tus necesidades
+            messages=[{"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple."},  {"role": "user", "content": prompt}],
+            max_tokens=1000 
         )
 
-        # Extrae el contenido generado por el modelo
-        resultado = response["choices"][0]["message"]["content"]
+        resultado = response["choices"][0]["message"]["content"]  #Extrae el contenido del JSON 
         tokens_usados = response["usage"]["total_tokens"]
         print(f"Tokens usados en la solicitud: {tokens_usados}")
 
         return resultado
     except Exception as error:
-        # Manejo de errores genéricos
-        print(f"Error inesperado: {error}")
         return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
-
-app = FastAPI()
+        
 
 async def Manejo_GenerarPreguntas(request: Request):
     try:
         # Extrae los datos de la solicitud
         body = await request.body()
         data = json.loads(body)
+        
+        if not data.get("texto"):
+        raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
 
-        # Validación inicial del texto proporcionado
-        if "texto" not in data or not data["texto"].strip():
-            raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
 
         # Llama a la función para generar preguntas
         result = GenerarPreguntas(data["texto"])
@@ -118,7 +109,7 @@ async def Manejo_GenerarPreguntas(request: Request):
         raise HTTPException(status_code=500, detail=f"Error al procesar la solicitud: {str(error)}")
 
 # Asocia manualmente la ruta con la función del endpoint
-app.router.add_api_route(
+FastAPI().router.add_api_route(
     path="/generate-questions/",
     endpoint=Manejo_GenerarPreguntas,
     methods=["POST"]
