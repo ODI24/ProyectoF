@@ -84,31 +84,21 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
         return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
 
 
+
 async def Manejo_GenerarPreguntas(request: Request):
-    try:
-        # Extrae los datos de la solicitud
-        body = await request.body()
-        data = json.loads(body)
-        
-        if not data.get("texto"):
-            raise HTTPException(status_code=400, detail="El texto no puede estar vacío.")
+    # Extrae los datos de la solicitud
+    body = await request.body()
+    data = json.loads(body)
 
-        # Llama a la función para generar preguntas
-        result = GenerarPreguntas(data["texto"])
+    # Llama a la función para generar preguntas
+    result = GenerarPreguntas(data["texto"])
 
-        # Si el resultado contiene un error, devolvemos una excepción HTTP
-        if isinstance(result, dict) and "error" in result:
-            raise HTTPException(status_code=500, detail=result["error"])
-
-        # Devuelve el resultado generado por OpenAI
-        return {"resultado": result}
-    except HTTPException as e:
-        raise e
-    except Exception as error:
-        raise HTTPException(status_code=500, detail=f"Error al procesar la solicitud: {str(error)}")
+    # Devuelve el resultado generado por OpenAI
+    return {"resultado": result}
 
 # Asocia manualmente la ruta con la función del endpoint
-FastAPI().router.add_api_route(
+app = FastAPI() #Si lo quito no tengo que ejecute uvicorn porque no asocia la variable app con FastAPI
+app.router.add_api_route(
     path="/generate-questions/",
     endpoint=Manejo_GenerarPreguntas,
     methods=["POST"]
