@@ -132,8 +132,8 @@ async def paypal_webhook(request: Request):
 @app.get("/paypal/success")
 async def paypal_success(token: str):
     try:
-        client_id = "TU_CLIENT_ID_SANDBOX"
-        client_secret = "TU_SECRET_KEY_SANDBOX"
+        client_id = "AUa7RDnRzErc3h2jSSybsUSH9UOkJzanZ51pD3Z0yIK1oajN5x9-c1XVeQrVyn8d4qYZRXJ94feyrPZQ"
+        client_secret = "EBVIEVa_JfQfDmh8Uawg4IRxqHPXNS0L6MZ__W3x7uB2RzZK8ynnnU8H2kPMmfvx1yNgTQL9AzC9O8dD"
 
         # Obtener Access Token
         auth_response = requests.post(
