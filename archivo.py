@@ -83,11 +83,28 @@ async def paypal_webhook(request: Request):
 
     print("✅ Webhook recibido de PayPal:", data)
 
-    if data.get("status") != "COMPLETED":
-        raise HTTPException(status_code=400, detail="Pago no completado.")
+    # Detectar tipo de evento
+    event_type = data.get("event_type")
+    resource = data.get("resource")
 
-    amount = float(data["purchase_units"][0]["amount"]["value"])
-    user_uid = data["purchase_units"][0]["custom_id"]
+    if event_type == "CHECKOUT.ORDER.COMPLETED":
+        # Este evento sí trae purchase_units
+        amount = float(resource["purchase_units"][0]["amount"]["value"])
+        user_uid = resource["purchase_units"][0]["custom_id"]
+
+    elif event_type == "PAYMENT.SALE.COMPLETED":
+        # Este evento trae diferente estructura
+        amount = float(resource["amount"]["total"])
+        user_uid = None  # 🔴 En este webhook no viene el user_uid, tendrías que ligarlo de otra forma si quieres
+
+        # Como no hay user_uid, aquí no podrías agregar tokens automáticamente.
+        # Solo podrías loguear el pago.
+
+        print(f"✅ Pago recibido: {amount} USD")
+        return {"message": "Pago recibido, pero sin user_uid."}
+
+    else:
+        raise HTTPException(status_code=400, detail="Evento de Webhook no soportado.")
 
     if not user_uid:
         raise HTTPException(status_code=400, detail="Falta UID del usuario.")
@@ -112,6 +129,7 @@ async def paypal_webhook(request: Request):
         return {"message": "Tokens agregados exitosamente."}
     else:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
 
 # =========================
 # Endpoint PayPal Success (nuevo)
