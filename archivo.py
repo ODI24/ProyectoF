@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from pydantic import BaseModel
 import openai
 import json
@@ -88,17 +88,12 @@ async def paypal_webhook(request: Request):
     resource = data.get("resource")
 
     if event_type == "CHECKOUT.ORDER.COMPLETED":
-        # Este evento sí trae purchase_units
         amount = float(resource["purchase_units"][0]["amount"]["value"])
         user_uid = resource["purchase_units"][0]["custom_id"]
 
     elif event_type == "PAYMENT.SALE.COMPLETED":
-        # Este evento trae diferente estructura
         amount = float(resource["amount"]["total"])
-        user_uid = None  # 🔴 En este webhook no viene el user_uid, tendrías que ligarlo de otra forma si quieres
-
-        # Como no hay user_uid, aquí no podrías agregar tokens automáticamente.
-        # Solo podrías loguear el pago.
+        user_uid = None
 
         print(f"✅ Pago recibido: {amount} USD")
         return {"message": "Pago recibido, pero sin user_uid."}
@@ -130,16 +125,15 @@ async def paypal_webhook(request: Request):
     else:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
 
-
 # =========================
-# Endpoint PayPal Success (nuevo)
+# Endpoint PayPal Success
 # =========================
 
 @app.get("/paypal/success")
 async def paypal_success(token: str):
     try:
         client_id = "AUa7RDnRzErc3h2jSSybsUSH9UOkJzanZ51pD3Z0yIK1oajN5x9-c1XVeQrVyn8d4qYZRXJ94feyrPZQ"
-        client_secret = os.getenv("TU_CLIENT_SECRET")
+        client_secret = "EBVlEVa_JfQfDmh8Uawg4IRxqHPXNS0L6MZ__W3x7uB2RzZK8ynnnU8H2kPMmfvx1yNgTQL9AzC9O8dD"
 
         # Obtener Access Token
         auth_response = requests.post(
@@ -163,8 +157,36 @@ async def paypal_success(token: str):
         capture_data = capture_response.json()
         print('✅ Orden capturada exitosamente:', capture_data)
 
-        return RedirectResponse(url="https://proyectof-gmma.onrender.com/pago-exitoso")  # 🔥
+        return RedirectResponse(url="https://proyectof-gmma.onrender.com/pago-exitoso")
 
     except Exception as e:
         print('❌ Error capturando pago:', str(e))
         return RedirectResponse(url="https://proyectof-gmma.onrender.com/pago-error")
+
+# =========================
+# Endpoints HTML: pago exitoso y error
+# =========================
+
+@app.get("/pago-exitoso", response_class=HTMLResponse)
+async def pago_exitoso():
+    return """
+    <html>
+      <head><title>Pago Exitoso</title></head>
+      <body style="background-color: #111827; color: #4CAF50; display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+        <h1>✅ ¡Pago realizado con éxito!</h1>
+        <p>Ya puedes regresar a la app y continuar.</p>
+      </body>
+    </html>
+    """
+
+@app.get("/pago-error", response_class=HTMLResponse)
+async def pago_error():
+    return """
+    <html>
+      <head><title>Error en el Pago</title></head>
+      <body style="background-color: #111827; color: #DC2626; display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+        <h1>❌ Hubo un problema con tu pago.</h1>
+        <p>Por favor intenta nuevamente.</p>
+      </body>
+    </html>
+    """
