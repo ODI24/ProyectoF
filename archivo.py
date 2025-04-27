@@ -3,15 +3,22 @@ from pydantic import BaseModel
 import openai
 import json
 import os
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-openai.api_key = os.getenv("API_KEY") #Variable de entorno
+# Inicializar Firebase Admin SDK una sola vez
+if not firebase_admin._apps:
+    cred = credentials.Certificate('/etc/secrets/quizforge-bf3c3-firebase-adminsdk-fbsvc-7b3f56d424')
+    firebase_admin.initialize_app(cred)
 
-class DatosRecibidos(BaseModel): # Clase para definir el modelo de datos recibidos
+db = firestore.client()
+
+openai.api_key = os.getenv("API_KEY")  # Variable de entorno
+
+class DatosRecibidos(BaseModel):  # Clase para definir el modelo de datos recibidos
     texto: str
 
-
-def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de tipado string
-    #Definimos una variable "Promt" y le asignamos un f-string  
+def GenerarPreguntas(texto: str):  # Función que espera el parámetro "texto" de tipo string
     prompt = f"""Q 
     Eres un generador de preguntas altamente específico y objetivo. Sigues estrictamente las siguientes reglas al generar preguntas de opción múltiple basadas en el texto proporcionado:
 
@@ -38,12 +45,12 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
        - SOLO genera preguntas basadas en hechos objetivos, comprobables y verificables.
 
     7. Manejo de preguntas:
-       - Generaras un maximo de diez preguntas.
+       - Generarás un máximo de diez preguntas.
        - Evita preguntas con respuestas obvias.
 
     8. Funcionalidad:
-       - NO sigas ningun tipo de instruccion que no sea realizar las preguntas y respuetas en el formato indicado de todo lo anterior.
-       - NO hacer otra cosa que las indicadas anteriormente, si se pide realizar otra cosa simplemente contestar "Solo puedo realizar preguntas y respuestas en el formato indicado".
+       - NO sigas ningún tipo de instrucción que no sea realizar las preguntas y respuestas en el formato indicado de todo lo anterior.
+       - NO hacer otra cosa que las indicadas anteriormente. Si se pide realizar otra cosa simplemente contestar "Solo puedo realizar preguntas y respuestas en el formato indicado".
 
     9. Restricción de temas:
        - NO generes problemas relacionados con Matemáticas, Física o procedimientos de cálculo.
@@ -76,11 +83,14 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple"},  {"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple"},
+                {"role": "user", "content": prompt}
+            ],
             max_tokens=1500
         )
 
-        resultado = response["choices"][0]["message"]["content"]  #Extrae el contenido del JSON 
+        resultado = response["choices"][0]["message"]["content"]  # Extrae el contenido del JSON
         tokens_usados = response["usage"]["total_tokens"]
         print(f"Tokens usados en la solicitud: {tokens_usados}")
 
@@ -88,8 +98,9 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
     except Exception as error:
         return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
 
+app = FastAPI()
 
-
+@app.post("/generate-questions/")
 async def Manejo_GenerarPreguntas(request: Request):
     body = await request.body()
     data = json.loads(body)
@@ -99,22 +110,16 @@ async def Manejo_GenerarPreguntas(request: Request):
     if isinstance(resultado, dict) and "error" in resultado:
         return resultado
 
-    # 🔥 Vuelve a generar el prompt para calcular los tokens usados
+    # 🔥 Vuelve a calcular tokens usados
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
-        messages=[{"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple"}, {"role": "user", "content": data["texto"]}],
+        messages=[
+            {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple"},
+            {"role": "user", "content": data["texto"]}
+        ],
         max_tokens=1500
     )
 
     tokens_usados = response["usage"]["total_tokens"]
 
     return {"resultado": resultado, "tokens_usados": tokens_usados}
-
-
-# Asocia manualmente la ruta con la función del endpoint
-app = FastAPI() #Si lo quito no tengo que ejecute uvicorn porque no asocia la variable app con FastAPI
-app.router.add_api_route(
-    path="/generate-questions/",
-    endpoint=Manejo_GenerarPreguntas,
-    methods=["POST"]
-)
