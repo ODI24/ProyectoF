@@ -15,6 +15,12 @@ db = firestore.client()
 
 openai.api_key = os.getenv("API_KEY")  # Variable de entorno
 
+app = FastAPI()
+
+# =========================
+# Endpoint de Generar Preguntas
+# =========================
+
 class DatosRecibidos(BaseModel):  # Clase para definir el modelo de datos recibidos
     texto: str
 
@@ -89,16 +95,12 @@ def GenerarPreguntas(texto: str):  # Función que espera el parámetro "texto" d
             ],
             max_tokens=1500
         )
-
-        resultado = response["choices"][0]["message"]["content"]  # Extrae el contenido del JSON
+        resultado = response["choices"][0]["message"]["content"]
         tokens_usados = response["usage"]["total_tokens"]
         print(f"Tokens usados en la solicitud: {tokens_usados}")
-
         return resultado
     except Exception as error:
-        return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
-
-app = FastAPI()
+        return {"error": f"Error al interactuar con OpenAI: {str(error)}"}
 
 @app.post("/generate-questions/")
 async def Manejo_GenerarPreguntas(request: Request):
@@ -110,7 +112,6 @@ async def Manejo_GenerarPreguntas(request: Request):
     if isinstance(resultado, dict) and "error" in resultado:
         return resultado
 
-    # 🔥 Vuelve a calcular tokens usados
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -123,3 +124,44 @@ async def Manejo_GenerarPreguntas(request: Request):
     tokens_usados = response["usage"]["total_tokens"]
 
     return {"resultado": resultado, "tokens_usados": tokens_usados}
+
+# =========================
+# Endpoint Webhook de PayPal
+# =========================
+
+@app.post("/paypal/webhook/")
+async def paypal_webhook(request: Request):
+    form_data = await request.form()
+    data = dict(form_data)
+
+    print("✅ Webhook recibido de PayPal:", data)
+
+    if data.get("payment_status") != "Completed":
+        raise HTTPException(status_code=400, detail="Pago no completado.")
+
+    amount = float(data.get("mc_gross", "0.00"))
+    user_uid = data.get("custom")
+
+    if not user_uid:
+        raise HTTPException(status_code=400, detail="Falta UID del usuario.")
+
+    tokens_to_add = 0
+    if amount == 1.00:
+        tokens_to_add = 1000
+    elif amount == 5.00:
+        tokens_to_add = 5000
+    elif amount == 10.00:
+        tokens_to_add = 10000
+    else:
+        raise HTTPException(status_code=400, detail="Monto no válido.")
+
+    user_ref = db.collection('usuarios').document(user_uid)
+    user_doc = user_ref.get()
+
+    if user_doc.exists:
+        current_tokens = user_doc.to_dict().get('tokens', 0)
+        user_ref.update({'tokens': current_tokens + tokens_to_add})
+        print(f"✅ Tokens actualizados para UID {user_uid}: {current_tokens} ➡️ {current_tokens + tokens_to_add}")
+        return {"message": "Tokens agregados exitosamente."}
+    else:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
