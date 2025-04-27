@@ -50,28 +50,55 @@ def GenerarPreguntas(texto: str):
     except Exception as error:
         return {"error": f"Error al interactuar con OpenAI: {str(error)}"}
 
+
 @app.post("/generate-questions/")
 async def Manejo_GenerarPreguntas(request: Request):
     body = await request.body()
     data = json.loads(body)
+
+    uid = data.get("uid")  # 🔥 🔥 🔥 Muy importante: ahora debes enviar el UID desde la app
+
+    if not uid:
+        raise HTTPException(status_code=400, detail="Falta el UID del usuario.")
 
     resultado = GenerarPreguntas(data["texto"])
 
     if isinstance(resultado, dict) and "error" in resultado:
         return resultado
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple"},
-            {"role": "user", "content": data["texto"]}
-        ],
-        max_tokens=1500
-    )
+    # Se vuelve a llamar mal aquí, eliminamos esta llamada duplicada:
+    # response = openai.ChatCompletion.create(...)
+    # tokens_usados = response["usage"]["total_tokens"]
 
-    tokens_usados = response["usage"]["total_tokens"]
+    # Recupera los tokens usados del primer llamado
+    tokens_usados = resultado.get("tokens_usados") if isinstance(resultado, dict) else None
+
+    if not tokens_usados:
+        raise HTTPException(status_code=400, detail="No se pudieron calcular los tokens usados.")
+
+    # 🔥 Actualizar tokens en Firestore
+    user_ref = db.collection('usuarios').document(uid)
+    user_doc = user_ref.get()
+
+    if user_doc.exists:
+        user_data = user_doc.to_dict()
+        current_tokens = user_data.get('tokens', 0)
+
+        if not isinstance(current_tokens, int):
+            current_tokens = 0
+
+        if current_tokens < tokens_usados:
+            raise HTTPException(status_code=400, detail="No tienes suficientes tokens.")
+
+        new_token_balance = current_tokens - tokens_usados
+        user_ref.update({'tokens': new_token_balance})
+
+        print(f"✅ Tokens descontados: {tokens_usados}. Balance ahora: {new_token_balance}")
+    else:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
 
     return {"resultado": resultado, "tokens_usados": tokens_usados}
+
 
 # =========================
 # Endpoint Webhook de PayPal
