@@ -91,15 +91,25 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
 
 
 async def Manejo_GenerarPreguntas(request: Request):
-    # Extrae los datos de la solicitud
     body = await request.body()
     data = json.loads(body)
 
-    # Llama a la función para generar preguntas
-    result = GenerarPreguntas(data["texto"])
+    resultado = GenerarPreguntas(data["texto"])
 
-    # Devuelve el resultado generado por OpenAI
-    return {"resultado": result}
+    if isinstance(resultado, dict) and "error" in resultado:
+        return resultado
+
+    # 🔥 Vuelve a generar el prompt para calcular los tokens usados
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple"}, {"role": "user", "content": data["texto"]}],
+        max_tokens=1500
+    )
+
+    tokens_usados = response["usage"]["total_tokens"]
+
+    return {"resultado": resultado, "tokens_usados": tokens_usados}
+
 
 # Asocia manualmente la ruta con la función del endpoint
 app = FastAPI() #Si lo quito no tengo que ejecute uvicorn porque no asocia la variable app con FastAPI
