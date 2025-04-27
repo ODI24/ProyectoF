@@ -29,7 +29,7 @@ class DatosRecibidos(BaseModel):
 
 def GenerarPreguntas(texto: str):
     prompt = f"""Q 
-    (aquí sigue todo tu prompt largo que ya tienes, igual, no cambia nada)
+    (todo tu prompt sigue igual)
     Texto para analizar:
     {texto}
     """
@@ -46,9 +46,13 @@ def GenerarPreguntas(texto: str):
         resultado = response["choices"][0]["message"]["content"]
         tokens_usados = response["usage"]["total_tokens"]
         print(f"Tokens usados en la solicitud: {tokens_usados}")
-        return resultado
+        return {
+            "resultado": resultado,
+            "tokens_usados": tokens_usados
+        }
     except Exception as error:
         return {"error": f"Error al interactuar con OpenAI: {str(error)}"}
+
 
 
 @app.post("/generate-questions/")
