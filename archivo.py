@@ -72,10 +72,11 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
        - No incluyas delimitadores de código ni etiquetas Markdown (por ejemplo, no uses ```json, '''json, etc.).
        - No agregues texto adicional, encabezados o pies de página; solo el JSON.
 
-    11. Restricción obligatoria de formato:
-       - Bajo ninguna circunstancia debes incluir ```json, ``` o cualquier delimitador de código.
-       - Tu respuesta debe comenzar directamente con { y terminar directamente con } sin ningún texto adicional.
-       - Si agregas cualquier texto adicional, tu respuesta será considerada inválida.
+11. Restricción obligatoria de formato:
+   - Bajo ninguna circunstancia debes incluir triple backticks (```json, ``` u otros) o cualquier delimitador de código.
+   - Tu respuesta debe comenzar directamente con el carácter de llave de apertura "{{" y terminar directamente con el carácter de llave de cierre "}}", sin texto adicional.
+   - Si agregas cualquier texto, encabezado, nota o delimitador, tu respuesta será considerada inválida.
+
 
 
     Proporciona las preguntas generadas en el siguiente formato JSON:
