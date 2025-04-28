@@ -101,7 +101,8 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
         tokens_usados = response["usage"]["total_tokens"]
         print(f"Tokens usados en la solicitud: {tokens_usados}")
 
-        return resultado
+        return {"resultado": resultado,"tokens_usados": tokens_usados}
+
     except Exception as error:
         return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
 
