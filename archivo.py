@@ -89,7 +89,6 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
     Texto para analizar:
     {texto}
     """
-
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
