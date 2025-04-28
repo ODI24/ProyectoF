@@ -27,13 +27,6 @@ app = FastAPI()
 class DatosRecibidos(BaseModel):
     texto: str
 
-def GenerarPreguntas(texto: str):
-    prompt = f"""Q 
-    (todo tu prompt sigue igual)
-    Texto para analizar:
-    {texto}
-    """
-
 def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de tipado string
     #Definimos una variable "Promt" y le asignamos un f-string  
     prompt = f"""Q 
