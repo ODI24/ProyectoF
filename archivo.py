@@ -71,6 +71,7 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
        - La respuesta debe ser un JSON válido y nada más.
        - No incluyas delimitadores de código ni etiquetas Markdown (por ejemplo, no uses ```json, '''json, etc.).
        - No agregues texto adicional, encabezados o pies de página; solo el JSON.
+       
     11. Formato estricto:
        - Asegúrate de que el JSON generado sea completamente válido y pueda ser interpretado directamente por un parser JSON.
        -No encierres la respuesta dentro de comillas.
