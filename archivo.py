@@ -335,7 +335,11 @@ class ClasificarPayload(BaseModel):
 @app.post("/clasificar-palabras-clave/")
 async def clasificar_palabras_clave(payload: ClasificarPayload):
     prompt = f"""
-Eres un clasificador experto. Recibirás preguntas y respuestas. Tu tarea es extraer palabras clave y asignarlas a subramas según esta estructura:
+Eres un clasificador experto. Recibirás un conjunto de preguntas y respuestas de estudiantes. Tu tarea es:
+
+1. Extraer solo palabras clave relevantes, específicas y significativas del contenido (evita palabras como "pregunta", "respuesta", "tema", etc.).
+2. No incluyas palabras genéricas o sin contexto académico.
+3. Clasifica cada palabra clave en su subrama correcta de acuerdo a esta estructura:
 
 Historia: Historia Antigua, Edad Media, Edad Moderna, Historia Contemporánea
 Español: Gramática, Literatura, Ortografía, Redacción
