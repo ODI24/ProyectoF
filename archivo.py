@@ -72,10 +72,10 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
        - No incluyas delimitadores de código ni etiquetas Markdown (por ejemplo, no uses ```json, '''json, etc.).
        - No agregues texto adicional, encabezados o pies de página; solo el JSON.
 
-11. Restricción obligatoria de formato:
-   - Bajo ninguna circunstancia debes incluir triple backticks (```json, ``` u otros) o cualquier delimitador de código.
-   - Tu respuesta debe comenzar directamente con el carácter de llave de apertura "{{" y terminar directamente con el carácter de llave de cierre "}}", sin texto adicional.
-   - Si agregas cualquier texto, encabezado, nota o delimitador, tu respuesta será considerada inválida.
+    11. Restricción obligatoria de formato:
+    - Bajo ninguna circunstancia debes incluir triple backticks (```json, ``` u otros) o cualquier delimitador de código.
+    - Tu respuesta debe comenzar directamente con el carácter de llave de apertura "{{" y terminar directamente con el carácter de llave de cierre "}}", sin texto adicional.
+    - Si agregas cualquier texto, encabezado, nota o delimitador, tu respuesta será considerada inválida.
 
 
 
@@ -324,3 +324,68 @@ async def pago_error():
       </body>
     </html>
     """
+
+
+from typing import List, Dict
+
+class ClasificarPayload(BaseModel):
+    uid: str
+    contenido: List[str]
+
+@app.post("/clasificar-palabras-clave/")
+async def clasificar_palabras_clave(payload: ClasificarPayload):
+    prompt = f"""
+Eres un clasificador experto. Recibirás preguntas y respuestas. Tu tarea es extraer palabras clave y asignarlas a subramas según esta estructura:
+
+Historia: Historia Antigua, Edad Media, Edad Moderna, Historia Contemporánea
+Español: Gramática, Literatura, Ortografía, Redacción
+Biología: Genética, Ecología, Fisiología, Biología Celular, Evolución
+Matemáticas: Álgebra, Geometría, Cálculo, Probabilidad y Estadística, Matemáticas Discretas
+Física: Mecánica, Termodinámica, Electromagnetismo, Óptica, Física Cuántica
+Química: Química Orgánica, Química Inorgánica, Fisicoquímica, Química Analítica, Bioquímica
+
+Clasifica cada palabra clave bajo el siguiente formato JSON:
+
+{{
+  "clasificadas": {{
+    "materia": {{
+      "subrama": ["palabra1", "palabra2"]
+    }}
+  }}
+}}
+
+NO uses encabezados, comentarios, ni backticks. Solo devuelve el JSON plano. Aquí va el contenido:
+
+{payload.contenido}
+"""
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                { "role": "system", "content": "Devuelve solo JSON plano, sin ``` ni texto adicional." },
+                { "role": "user", "content": prompt }
+            ],
+            max_tokens=3000
+        )
+
+        contenido = response["choices"][0]["message"]["content"]
+        datos = json.loads(contenido)
+
+        user_ref = db.collection("usuarios").document(payload.uid)
+
+        # Construye updates para Firestore
+        updates = {}
+        for materia, subramas in datos["clasificadas"].items():
+            for subrama, palabras in subramas.items():
+                ruta = f"palabras_clave.{materia}.{subrama}"
+                updates[ruta] = firestore.ArrayUnion(palabras)
+
+        for ruta, palabras in updates.items():
+            user_ref.update({ruta: palabras})
+
+        return { "estado": "actualizado", "resultado": datos }
+
+    except Exception as e:
+        print("❌ Error:", str(e))
+        return { "error": str(e) }
