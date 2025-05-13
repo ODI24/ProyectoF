@@ -393,3 +393,24 @@ NO uses encabezados, comentarios, ni backticks. Solo devuelve el JSON plano. Aqu
     except Exception as e:
         print("❌ Error:", str(e))
         return { "error": str(e) }
+
+
+
+from fastapi import Body
+import tiktoken
+
+class TokenInput(BaseModel):
+    texto: str
+
+@app.post("/contar-tokens/")
+async def contar_tokens(payload: TokenInput):
+    try:
+        # Usa el codificador de gpt-3.5-turbo
+        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        tokens = encoding.encode(payload.texto)
+        total_tokens = len(tokens)
+        return {"tokens_estimados": total_tokens}
+    except Exception as e:
+        print("❌ Error al estimar tokens:", str(e))
+        raise HTTPException(status_code=500, detail="Error al calcular tokens.")
+
