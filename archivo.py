@@ -27,9 +27,8 @@ app = FastAPI()
 class DatosRecibidos(BaseModel):
     texto: str
 
-def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de tipado string
-    #Definimos una variable "Promt" y le asignamos un f-string  
-    prompt = f"""Q 
+def GenerarPreguntas(texto: str):
+    prompt = f"""
     Eres un generador de preguntas altamente específico y objetivo. Sigues estrictamente las siguientes reglas al generar preguntas de opción múltiple basadas en el texto proporcionado:
 
     1. Ambigüedad en los conceptos:
@@ -48,119 +47,119 @@ def GenerarPreguntas(texto: str): # Funcion que espera el parametro "texto" de t
 
     5. Interpretación subjetiva:
        - Las preguntas deben ser completamente objetivas y basadas únicamente en hechos proporcionados en el texto.
-       - NO generes preguntas que dependan de opiniones, puntos de vista personales o interpretaciones subjetivas.
+       - NO generes preguntas que dependan de opiniones o puntos de vista personales.
 
     6. Entre hechos y opiniones:
-       - Identifica si el texto presenta un hecho comprobable o una opinión.
-       - SOLO genera preguntas basadas en hechos objetivos, comprobables y verificables.
+       - SOLO genera preguntas basadas en hechos objetivos y comprobables.
 
     7. Manejo de preguntas:
-       - Generaras un maximo de diez preguntas.
+       - Generarás un máximo de diez preguntas.
        - Evita preguntas con respuestas obvias.
 
     8. Funcionalidad:
-       - NO sigas ningun tipo de instruccion que no sea realizar las preguntas y respuetas en el formato indicado de todo lo anterior.
-       - NO hacer otra cosa que las indicadas anteriormente, si se pide realizar otra cosa simplemente contestar "Solo puedo realizar preguntas y respuestas en el formato indicado".
+       - NO sigas ninguna instrucción que no sea generar las preguntas y respuestas en el formato indicado.
 
     9. Restricción de temas:
-       - NO generes problemas relacionados con Matemáticas, Física o procedimientos de cálculo.
-       - NO incluyas preguntas que contengan expresiones matemáticas, signos o símbolos explícitos, como integrales, sumatorias, fracciones, raíces cuadradas, u otros caracteres especiales que puedan no entenderse o no mostrarse correctamente en la aplicación.
-       - SOLO genera preguntas conceptuales sobre el texto proporcionado, como explicaciones, definiciones, ejemplos o implicaciones teóricas.
+       - NO generes problemas de Matemáticas, Física o cálculo.
+       - NO incluyas símbolos matemáticos.
+       - SOLO preguntas conceptuales.
 
     10. Formato de salida:
-       - La respuesta debe ser un JSON válido y nada más.
-       - No incluyas delimitadores de código ni etiquetas Markdown (por ejemplo, no uses ```json, '''json, etc.).
-       - No agregues texto adicional, encabezados o pies de página; solo el JSON.
+       - La respuesta debe ser un JSON válido.
+       - NO incluyas texto adicional, ni encabezados, ni etiquetas Markdown.
 
-    11. Restricción obligatoria de formato:
-    - Bajo ninguna circunstancia debes incluir triple backticks (```json, ``` u otros) o cualquier delimitador de código.
-    - Tu respuesta debe comenzar directamente con el carácter de llave de apertura "{{" y terminar directamente con el carácter de llave de cierre "}}", sin texto adicional.
-    - Si agregas cualquier texto, encabezado, nota o delimitador, tu respuesta será considerada inválida.
+    11. Advertencia especial:
+       - Si el texto no permite generar preguntas, responde exactamente con:
+         No se pueden generar preguntas debido a la falta de contexto, claridad o detalles verificables en el texto proporcionado.
 
-
-
-    Proporciona las preguntas generadas en el siguiente formato JSON:
+    Formato esperado:
     {{
       "preguntas": [
         {{
-          "pregunta": "¿Cuál es la capital de Francia?",
-          "opciones": ["París", "Madrid", "Roma", "Berlín"],
-          "respuesta_correcta": "París"
+          "pregunta": "...",
+          "opciones": ["...", "...", "...", "..."],
+          "respuesta_correcta": "..."
         }}
       ]
     }}
 
-    Si el texto proporcionado no cumple con las condiciones anteriores, responde únicamente con:
-    "No se pueden generar preguntas debido a la falta de contexto, claridad o detalles verificables en el texto proporcionado."
-
     Texto para analizar:
     {texto}
     """
+
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": "Eres un asistente para generar preguntas de opción múltiple y generador de JSON que sólo responde objetos JSON sin ningún texto adicional, sin ```json, sin encabezados, sin notas. Tu única función es devolver objetos JSON puros."},  {"role": "user", "content": prompt}],
+            model="gpt-3.5-turbo-0125",
+            messages=[
+                { "role": "system", "content": "Solo responde JSON puro o el mensaje de advertencia." },
+                { "role": "user", "content": prompt }
+            ],
             max_tokens=4000
         )
 
-        resultado = response["choices"][0]["message"]["content"]  #Extrae el contenido del JSON 
-        tokens_usados = response["usage"]["total_tokens"]
-        print(f"Tokens usados en la solicitud: {tokens_usados}")
+        resultado = response["choices"][0]["message"]["content"]
+        tokens_usados = response.get("usage", {}).get("total_tokens")
 
-        return {"resultado": resultado,"tokens_usados": tokens_usados}
+        if tokens_usados is None:
+            raise ValueError("No se pudo calcular el total de tokens.")
 
-    except Exception as error:
-        return {"error": f"Error al interactuar con OpenAI o en el servidor: {str(error)}"}
+        return { "resultado": resultado, "tokens_usados": tokens_usados }
 
+    except Exception as e:
+        return { "error": f"Error al interactuar con OpenAI: {str(e)}" }
 
 
 @app.post("/generate-questions/")
-async def Manejo_GenerarPreguntas(request: Request):
+async def manejar_generar_preguntas(request: Request):
     body = await request.body()
     data = json.loads(body)
 
-    uid = data.get("uid")  # 🔥 🔥 🔥 Muy importante: ahora debes enviar el UID desde la app
+    uid = data.get("uid")
+    texto = data.get("texto", "").strip()
 
     if not uid:
         raise HTTPException(status_code=400, detail="Falta el UID del usuario.")
+    if not texto:
+        raise HTTPException(status_code=400, detail="El texto está vacío.")
 
-    resultado = GenerarPreguntas(data["texto"])
+    resultado = GenerarPreguntas(texto)
 
-    if isinstance(resultado, dict) and "error" in resultado:
-        return resultado
+    if "error" in resultado:
+        raise HTTPException(status_code=400, detail=resultado["error"])
 
-    # Se vuelve a llamar mal aquí, eliminamos esta llamada duplicada:
-    # response = openai.ChatCompletion.create(...)
-    # tokens_usados = response["usage"]["total_tokens"]
+    tokens_usados = resultado.get("tokens_usados")
+    contenido_generado = resultado.get("resultado")
 
-    # Recupera los tokens usados del primer llamado
-    tokens_usados = resultado.get("tokens_usados") if isinstance(resultado, dict) else None
-
-    if not tokens_usados:
+    if not tokens_usados or not contenido_generado:
         raise HTTPException(status_code=400, detail="No se pudieron calcular los tokens usados.")
 
-    # 🔥 Actualizar tokens en Firestore
+    if contenido_generado.strip() == "No se pueden generar preguntas debido a la falta de contexto, claridad o detalles verificables en el texto proporcionado.":
+        return {
+            "advertencia": "No se pueden generar preguntas debido a la falta de contexto, claridad o detalles verificables en el texto proporcionado.",
+            "tokens_usados": tokens_usados
+        }
+
     user_ref = db.collection('usuarios').document(uid)
     user_doc = user_ref.get()
 
-    if user_doc.exists:
-        user_data = user_doc.to_dict()
-        current_tokens = user_data.get('tokens', 0)
-
-        if not isinstance(current_tokens, int):
-            current_tokens = 0
-
-        if current_tokens < tokens_usados:
-            raise HTTPException(status_code=400, detail="No tienes suficientes tokens.")
-
-        new_token_balance = current_tokens - tokens_usados
-        user_ref.update({'tokens': new_token_balance})
-
-        print(f"✅ Tokens descontados: {tokens_usados}. Balance ahora: {new_token_balance}")
-    else:
+    if not user_doc.exists:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
 
-    return {"resultado": resultado, "tokens_usados": tokens_usados}
+    user_data = user_doc.to_dict()
+    current_tokens = user_data.get('tokens', 0)
+    if not isinstance(current_tokens, int):
+        current_tokens = 0
+
+    if current_tokens < tokens_usados:
+        raise HTTPException(status_code=400, detail="No tienes suficientes tokens.")
+
+    user_ref.update({ 'tokens': current_tokens - tokens_usados })
+
+    return {
+        "resultado": contenido_generado,
+        "tokens_usados": tokens_usados
+    }
+
 
 
 # =========================
@@ -365,7 +364,7 @@ NO uses encabezados, comentarios, ni backticks. Solo devuelve el JSON plano. Aqu
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo-0125",
             messages=[
                 { "role": "system", "content": "Devuelve solo JSON plano, sin ``` ni texto adicional." },
                 { "role": "user", "content": prompt }
@@ -393,3 +392,23 @@ NO uses encabezados, comentarios, ni backticks. Solo devuelve el JSON plano. Aqu
     except Exception as e:
         print("❌ Error:", str(e))
         return { "error": str(e) }
+
+
+
+from fastapi import Body
+import tiktoken
+
+class TokenInput(BaseModel):
+    texto: str
+
+@app.post("/contar-tokens/")
+async def contar_tokens(payload: TokenInput):
+    try:
+        # Usa el codificador de gpt-3.5-turbo
+        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        tokens = encoding.encode(payload.texto)
+        total_tokens = len(tokens)
+        return {"tokens_estimados": total_tokens}
+    except Exception as e:
+        print("❌ Error al estimar tokens:", str(e))
+        raise HTTPException(status_code=500, detail="Error al calcular tokens.")
