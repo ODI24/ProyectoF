@@ -5,3 +5,4 @@ openai==0.27.8
 firebase-admin
 requests
 python-multipart
+tiktoken==0.5.1
