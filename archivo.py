@@ -153,12 +153,73 @@ async def manejar_generar_preguntas(request: Request):
     if current_tokens < tokens_usados:
         raise HTTPException(status_code=400, detail="No tienes suficientes tokens.")
 
+    # ✅ Descontar tokens del usuario
     user_ref.update({ 'tokens': current_tokens - tokens_usados })
+
+    # 🔍 Detectar la materia del contenido generado
+    materia_detectada = None
+    try:
+        preguntas_data = json.loads(contenido_generado)
+        contenido_para_clasificar = []
+
+        for item in preguntas_data.get("preguntas", []):
+            pregunta = item.get("pregunta", "")
+            respuesta = item.get("respuesta_correcta", "")
+            if pregunta:
+                contenido_para_clasificar.append(pregunta)
+            if respuesta:
+                contenido_para_clasificar.append(respuesta)
+
+        prompt_clasificar = f"""
+Eres un clasificador experto. Recibirás un conjunto de preguntas y respuestas de estudiantes. Tu tarea es:
+
+1. Extraer solo palabras clave relevantes, específicas y significativas del contenido.
+2. Clasifica cada palabra clave en su subrama correcta de acuerdo a esta estructura:
+
+Historia: Historia Antigua, Edad Media, Edad Moderna, Historia Contemporánea
+Español: Gramática, Literatura, Ortografía, Redacción
+Biología: Genética, Ecología, Fisiología, Biología Celular, Evolución
+Matemáticas: Álgebra, Geometría, Cálculo, Probabilidad y Estadística, Matemáticas Discretas
+Física: Mecánica, Termodinámica, Electromagnetismo, Óptica, Física Cuántica
+Química: Química Orgánica, Química Inorgánica, Fisicoquímica, Química Analítica, Bioquímica
+
+Formato:
+{{
+  "clasificadas": {{
+    "materia": {{
+      "subrama": ["palabra1", "palabra2"]
+    }}
+  }}
+}}
+
+NO uses encabezados, ni comentarios. Devuelve solo JSON plano. Aquí va el contenido:
+
+{contenido_para_clasificar}
+"""
+
+        response_clasificacion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-0125",
+            messages=[
+                { "role": "system", "content": "Devuelve solo JSON plano, sin ``` ni texto adicional." },
+                { "role": "user", "content": prompt_clasificar }
+            ],
+            max_tokens=1500
+        )
+
+        clasificacion_result = json.loads(response_clasificacion["choices"][0]["message"]["content"])
+        materias = clasificacion_result.get("clasificadas", {}).keys()
+        materia_detectada = list(materias)[0] if materias else None
+
+    except Exception as e:
+        print("❌ No se pudo detectar la materia:", str(e))
+        materia_detectada = None
 
     return {
         "resultado": contenido_generado,
-        "tokens_usados": tokens_usados
+        "tokens_usados": tokens_usados,
+        "materia": materia_detectada
     }
+
 
 
 
