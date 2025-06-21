@@ -133,12 +133,34 @@ async def manejar_generar_preguntas(request: Request):
     if not tokens_usados or not contenido_generado:
         raise HTTPException(status_code=400, detail="No se pudieron calcular los tokens usados.")
 
-    if contenido_generado.strip() == "No se pueden generar preguntas debido a la falta de contexto, claridad o detalles verificables en el texto proporcionado.":
+    # ✅ Validación estricta: ¿el contenido tiene al menos una pregunta válida?
+    try:
+        preguntas_data = json.loads(contenido_generado)
+        preguntas_lista = preguntas_data.get("preguntas", [])
+
+        if not preguntas_lista or not isinstance(preguntas_lista, list):
+            return {
+                "advertencia": "La IA no generó ninguna pregunta válida.",
+                "tokens_usados": tokens_usados
+            }
+
+        hay_preguntas_utiles = any(
+            p.get("pregunta") and p.get("respuesta_correcta") for p in preguntas_lista
+        )
+
+        if not hay_preguntas_utiles:
+            return {
+                "advertencia": "La IA no generó preguntas completas con respuestas.",
+                "tokens_usados": tokens_usados
+            }
+
+    except Exception as e:
         return {
-            "advertencia": "No se pueden generar preguntas debido a la falta de contexto, claridad o detalles verificables en el texto proporcionado.",
+            "advertencia": "Error al interpretar la respuesta de la IA.",
             "tokens_usados": tokens_usados
         }
 
+    # ✅ Obtener usuario y descontar tokens solo si hay preguntas válidas
     user_ref = db.collection('usuarios').document(uid)
     user_doc = user_ref.get()
 
@@ -153,16 +175,14 @@ async def manejar_generar_preguntas(request: Request):
     if current_tokens < tokens_usados:
         raise HTTPException(status_code=400, detail="No tienes suficientes tokens.")
 
-    # ✅ Descontar tokens del usuario
     user_ref.update({ 'tokens': current_tokens - tokens_usados })
 
-    # 🔍 Detectar la materia del contenido generado
+    # 🔍 Clasificación por materia
     materia_detectada = None
     try:
-        preguntas_data = json.loads(contenido_generado)
         contenido_para_clasificar = []
 
-        for item in preguntas_data.get("preguntas", []):
+        for item in preguntas_lista:
             pregunta = item.get("pregunta", "")
             respuesta = item.get("respuesta_correcta", "")
             if pregunta:
