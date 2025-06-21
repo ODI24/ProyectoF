@@ -156,7 +156,7 @@ async def manejar_generar_preguntas(request: Request):
 
     except Exception as e:
         return {
-            "advertencia": "Error al interpretar la respuesta de la IA.",
+            "advertencia": "Error: No se pudieron generar preguntas/respuesta en base al texto proporcionado.",
             "tokens_usados": tokens_usados
         }
 
