@@ -89,7 +89,7 @@ def GenerarPreguntas(texto: str):
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo-0125",
+            model="gpt-4o",
             messages=[
                 { "role": "system", "content": "Solo responde JSON puro o el mensaje de advertencia." },
                 { "role": "user", "content": prompt }
