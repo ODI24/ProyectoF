@@ -419,6 +419,7 @@ Eres un clasificador experto. Recibirás un conjunto de preguntas y respuestas d
 
 1. Extraer solo palabras clave relevantes, específicas y significativas del contenido (evita palabras como "pregunta", "respuesta", "tema", etc.).
 2. No incluyas palabras genéricas o sin contexto académico.
+4. Se prioriza la selección de palabras clave según su frecuencia (número de apariciones en el texto), dando preferencia a aquellas que aparecen con menor frecuencia en comparación con las más repetidas.
 3. Retornar un maximo de 3 palabras clave.
 4. Clasifica cada palabra clave en su subrama correcta de acuerdo a esta estructura:
 
