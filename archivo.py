@@ -419,7 +419,8 @@ Eres un clasificador experto. Recibirás un conjunto de preguntas y respuestas d
 
 1. Extraer solo palabras clave relevantes, específicas y significativas del contenido (evita palabras como "pregunta", "respuesta", "tema", etc.).
 2. No incluyas palabras genéricas o sin contexto académico.
-3. Clasifica cada palabra clave en su subrama correcta de acuerdo a esta estructura:
+3. Retornar un maximo de 3 palabras clave.
+4. Clasifica cada palabra clave en su subrama correcta de acuerdo a esta estructura:
 
 Historia: Historia Antigua, Edad Media, Edad Moderna, Historia Contemporánea
 Español: Gramática, Literatura, Ortografía, Redacción
