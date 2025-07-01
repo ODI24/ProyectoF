@@ -488,7 +488,7 @@ class TokenInput(BaseModel):
 async def contar_tokens(payload: TokenInput):
     try:
         # Usa el codificador de gpt-3.5-turbo
-        encoding = tiktoken.encoding_for_model("gpt-4o")
+        encoding = tiktoken.get_encoding("cl100k_base").
         tokens = encoding.encode(payload.texto)
         total_tokens = len(tokens)
         return {"tokens_estimados": total_tokens}
