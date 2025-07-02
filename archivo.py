@@ -459,9 +459,8 @@ NO uses encabezados, comentarios, ni backticks. Solo devuelve el JSON plano. Aqu
         datos = json.loads(contenido)
 
         user_ref = db.collection("usuarios").document(payload.uid)
-
-        # Construye updates para Firestore
-        # Construye updates para Firestore con cada palabra como { palabra: { peso: 1.0 } }
+        
+        # Construye updates, Firestore { palabra: { peso: 1.0 } }
         updates = {}
         for materia, subramas in datos["clasificadas"].items():
             for subrama, palabras in subramas.items():
