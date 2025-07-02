@@ -461,14 +461,17 @@ NO uses encabezados, comentarios, ni backticks. Solo devuelve el JSON plano. Aqu
         user_ref = db.collection("usuarios").document(payload.uid)
 
         # Construye updates para Firestore
+        # Construye updates para Firestore con cada palabra como { palabra: { peso: 1.0 } }
         updates = {}
         for materia, subramas in datos["clasificadas"].items():
             for subrama, palabras in subramas.items():
-                ruta = f"palabras_clave.{materia}.{subrama}"
-                updates[ruta] = firestore.ArrayUnion(palabras)
-
-        for ruta, palabras in updates.items():
-            user_ref.update({ruta: palabras})
+                for palabra in palabras:
+                    ruta = f"palabras_clave.{materia}.{subrama}.{palabra}"
+                    updates[ruta] = {"peso": 1.0}
+        
+        # Aplica las actualizaciones en Firestore
+        user_ref.update(updates)
+        
 
         return { "estado": "actualizado", "resultado": datos }
 
